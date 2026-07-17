@@ -110,6 +110,11 @@ class Vehicle(CustomAPIBaseModel[type[T]]):
         self._metric = metric
         self._endpoint_data: dict[str, Any] = {}
 
+        # AU (tmca) expresses vehicle capabilities differently from EU, so the
+        # EU-shaped capability flags below under-report. Attempt the core
+        # endpoints regardless on AU; update() skips any that are unsupported.
+        au_region = getattr(self._api.controller, "_region", None) == "AU"
+
         if self._vehicle_info.vin:
             self._api_endpoints: list[EndpointDefinition] = [
                 EndpointDefinition(
@@ -152,13 +157,16 @@ class Vehicle(CustomAPIBaseModel[type[T]]):
                 ),
                 EndpointDefinition(
                     name="telemetry",
-                    capable=getattr(
+                    capable=au_region
+                    or getattr(
                         getattr(self._vehicle_info, "extended_capabilities", False),
                         "telemetry_capable",
                         False,
                     ),
                     function=partial(
-                        self._api.get_telemetry, vin=self._vehicle_info.vin
+                        self._api.get_telemetry,
+                        vin=self._vehicle_info.vin,
+                        generation=getattr(self._vehicle_info, "generation", None),
                     ),
                 ),
                 EndpointDefinition(
@@ -170,7 +178,8 @@ class Vehicle(CustomAPIBaseModel[type[T]]):
                 ),
                 EndpointDefinition(
                     name="status",
-                    capable=getattr(
+                    capable=au_region
+                    or getattr(
                         getattr(self._vehicle_info, "extended_capabilities", False),
                         "vehicle_status",
                         False,
@@ -181,7 +190,8 @@ class Vehicle(CustomAPIBaseModel[type[T]]):
                 ),
                 EndpointDefinition(
                     name="service_history",
-                    capable=getattr(
+                    capable=au_region
+                    or getattr(
                         getattr(self._vehicle_info, "features", False),
                         "service_history",
                         False,
@@ -285,7 +295,16 @@ class Vehicle(CustomAPIBaseModel[type[T]]):
                 continue
             if name in skip_set:
                 continue
-            self._endpoint_data[name] = await function()
+            # Endpoints are fetched independently: a single endpoint failing
+            # (e.g. one a region/subscription does not support returning 403,
+            # or a transient Toyota 429) must not abort the whole update. Log
+            # and continue; the endpoint keeps its previous _endpoint_data.
+            try:
+                self._endpoint_data[name] = await function()
+            except ToyotaApiError as exc:
+                logger.warning(
+                    "Skipping endpoint '{}' this update ({}).", name, exc
+                )
 
     @computed_field  # type: ignore[prop-decorator]
     @property

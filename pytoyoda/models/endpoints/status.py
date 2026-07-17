@@ -86,3 +86,60 @@ class RemoteStatusResponseModel(StatusModel):
     """
 
     payload: RemoteStatusModel | None = None
+
+
+# --- AU (tmca) status normalisation -----------------------------------------
+# The AU status endpoint returns the same category/section/values structure as
+# EU but with human-readable strings ("Driver Side", "Door", "Locked") instead
+# of the i18n keys ("carstatus_category_driver", ...) that LockStatus matches
+# on. Section names repeat across categories, so section mapping is scoped per
+# (normalised) category. Rewriting the strings in-place lets the existing
+# EU-keyed LockStatus mapping work unchanged.
+_AU_CATEGORY_MAP = {
+    "Driver Side": "carstatus_category_driver",
+    "Passenger Side": "carstatus_category_passenger",
+    "Other": "carstatus_category_other",
+}
+_AU_SECTION_MAP = {
+    "carstatus_category_driver": {
+        "Door": "carstatus_item_driver_door",
+        "Rear Door": "carstatus_item_driver_rear_door",
+        "Window": "carstatus_item_driver_window",
+        "Rear Window": "carstatus_item_driver_rear_window",
+    },
+    "carstatus_category_passenger": {
+        "Door": "carstatus_item_passenger_door",
+        "Rear Door": "carstatus_item_passenger_rear_door",
+        "Window": "carstatus_item_passenger_window",
+        "Rear Window": "carstatus_item_passenger_rear_window",
+    },
+    "carstatus_category_other": {
+        "Hatch": "carstatus_item_rear_hatch",
+        "Hood": "carstatus_item_hood",
+        "Bonnet": "carstatus_item_hood",
+    },
+}
+_AU_VALUE_MAP = {
+    "Closed": "carstatus_closed",
+    "Open": "carstatus_closed",
+    "Locked": "carstatus_locked",
+    "Unlocked": "carstatus_unlocked",
+}
+
+
+def normalize_au_status(model: RemoteStatusResponseModel | None) -> None:
+    """Rewrite AU human-readable status strings to EU i18n keys in-place.
+
+    Categories/sections not covered by the maps (e.g. "Trip Details",
+    "Hazards") are left unchanged and simply ignored by LockStatus.
+    """
+    if model is None or model.payload is None or not model.payload.vehicle_status:
+        return
+    for category in model.payload.vehicle_status:
+        mapped_category = _AU_CATEGORY_MAP.get(category.category, category.category)
+        section_map = _AU_SECTION_MAP.get(mapped_category, {})
+        category.category = mapped_category
+        for section in category.sections or []:
+            section.section = section_map.get(section.section, section.section)
+            for value in section.values or []:
+                value.value = _AU_VALUE_MAP.get(value.value, value.value)

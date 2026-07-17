@@ -24,6 +24,7 @@ from pytoyoda.const import (
     VEHICLE_NOTIFICATION_HISTORY_ENDPOINT,
     VEHICLE_SERVICE_HISTORY_ENDPONT,
     VEHICLE_TELEMETRY_ENDPOINT,
+    VEHICLE_TELEMETRY_ENDPOINT_AU,
     VEHICLE_TRIPS_ENDPOINT,
 )
 from pytoyoda.controller import Controller
@@ -44,7 +45,10 @@ from pytoyoda.models.endpoints.location import LocationResponseModel
 from pytoyoda.models.endpoints.notifications import NotificationResponseModel
 from pytoyoda.models.endpoints.refresh_status import RefreshStatusResponseModel
 from pytoyoda.models.endpoints.service_history import ServiceHistoryResponseModel
-from pytoyoda.models.endpoints.status import RemoteStatusResponseModel
+from pytoyoda.models.endpoints.status import (
+    RemoteStatusResponseModel,
+    normalize_au_status,
+)
 from pytoyoda.models.endpoints.telemetry import TelemetryResponseModel
 from pytoyoda.models.endpoints.trips import TripsResponseModel
 from pytoyoda.models.endpoints.vehicle_guid import VehiclesResponseModel
@@ -201,12 +205,17 @@ class Api:
             Model containing general vehicle status
 
         """
-        return await self._request_and_parse(
+        status = await self._request_and_parse(
             RemoteStatusResponseModel,
             "GET",
             VEHICLE_GLOBAL_REMOTE_STATUS_ENDPOINT,
             vin=vin,
         )
+        # AU returns human-readable category/section/value strings; rewrite
+        # them to the EU i18n keys that LockStatus maps on.
+        if self.controller._region == "AU":  # noqa: SLF001
+            normalize_au_status(status)
+        return status
 
     async def get_vehicle_electric_status(self, vin: str) -> ElectricResponseModel:
         """Get the latest electric status of a vehicle.
@@ -282,18 +291,32 @@ class Api:
             body=body,
         )
 
-    async def get_telemetry(self, vin: str) -> TelemetryResponseModel:
+    async def get_telemetry(
+        self, vin: str, generation: str | None = None
+    ) -> TelemetryResponseModel:
         """Get the latest telemetry data for a vehicle.
 
         Includes current fuel level, distance to empty, and odometer.
 
         Args:
             vin: Vehicle Identification Number
+            generation: Vehicle generation code (required by the AU v2
+                telemetry endpoint; ignored elsewhere)
 
         Returns:
             Model containing telemetry information
 
         """
+        # AU (tmca) uses a v2 telemetry endpoint that requires the vehicle
+        # "generation" header; the response maps onto the same TelemetryModel.
+        if self.controller._region == "AU":  # noqa: SLF001
+            return await self._request_and_parse(
+                TelemetryResponseModel,
+                "GET",
+                VEHICLE_TELEMETRY_ENDPOINT_AU,
+                vin=vin,
+                headers={"generation": generation} if generation else None,
+            )
         return await self._request_and_parse(
             TelemetryResponseModel, "GET", VEHICLE_TELEMETRY_ENDPOINT, vin=vin
         )

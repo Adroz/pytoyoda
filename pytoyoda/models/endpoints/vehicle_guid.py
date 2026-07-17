@@ -407,14 +407,14 @@ class VehicleGuidModel(CustomEndpointBaseModel):
     capabilities: list[_CapabilitiesModel] | None
     car_line_name: str | None = Field(alias="carlineName")
     color: str | None
-    commercial_rental: bool | None = Field(alias="commercialRental")
+    commercial_rental: bool | None = Field(alias="commercialRental", default=None)
     contract_id: str | None = Field(alias="contractId")
     cts_links: _LinksModel | None = Field(alias="ctsLinks")
     data_consent: _DataConsentModel | None = Field(alias="dataConsent")
     date_of_first_use: date | None = Field(alias="dateOfFirstUse")
     dcm: _DcmModel | None = None
     dcm_active: bool | None = Field(alias="dcmActive")
-    dcms: Any | None
+    dcms: Any | None = None
     display_model_description: str | None = Field(alias="displayModelDescription")
     display_subscriptions: list[dict[str, str]] | None = Field(
         alias="displaySubscriptions"

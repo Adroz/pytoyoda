@@ -1,5 +1,5 @@
 """Utilities for manipulating or extending pydantic models."""
-
+import contextlib
 from collections.abc import Callable
 from typing import Annotated, Any, Generic, TypeVar, get_args, get_origin
 
@@ -62,6 +62,30 @@ class CustomEndpointBaseModel(BaseModel):
                 cls.__annotations__[name] = Annotated[get_args(annotation), validator]
             else:
                 cls.__annotations__[name] = Annotated[annotation, validator]
+
+    @classmethod
+    def __pydantic_init_subclass__(cls, **kwargs: dict) -> None:
+        """Make every field optional (default None) after fields are built.
+
+        A field simply MISSING from a response should be treated the same as an
+        INVALID one (see invalid_to_none). Without this, a missing required
+        field raises before the wrap validator can run, which nulls the whole
+        parent model. Regional payloads (e.g. AU) legitimately omit many
+        EU-only fields, so all endpoint fields are made optional.
+        """
+        super().__pydantic_init_subclass__(**kwargs)
+        changed = False
+        for field in cls.model_fields.values():
+            if field.is_required():
+                field.default = None
+                changed = True
+        if changed:
+            # The model may have forward references not resolvable yet (models
+            # rebuilt explicitly elsewhere via update_forward_refs). The None
+            # defaults are recorded on the fields regardless and take effect at
+            # that later rebuild.
+            with contextlib.suppress(NameError):
+                cls.model_rebuild(force=True)
 
 
 class CustomAPIBaseModel(BaseModel, Generic[T]):

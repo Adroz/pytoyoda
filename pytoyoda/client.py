@@ -20,6 +20,7 @@ from __future__ import annotations
 from loguru import logger
 
 from pytoyoda.api import Api
+from pytoyoda.const import DEFAULT_REGION
 from pytoyoda.controller import Controller
 from pytoyoda.exceptions import ToyotaInvalidUsernameError, ToyotaLoginError
 from pytoyoda.models.vehicle import Vehicle
@@ -38,12 +39,13 @@ class MyT:
 
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         username: str,
         password: str,
         use_metric: bool = True,  # noqa : FBT001, FBT002
         brand: str = "T",
+        region: str = DEFAULT_REGION,
         controller_class: type[Controller] = Controller,
     ) -> None:
         """Initialize the Toyota Connected Services client.
@@ -53,6 +55,7 @@ class MyT:
             password: Password for Toyota account
             use_metric: Whether to use metric units (True) or imperial units (False)
             brand: Brand of the car (T for Toyota, L for Lexus)
+            region: Toyota region to connect to (e.g. "EU", "AU")
             controller_class: Controller class to use for API communication
 
         Raises:
@@ -68,6 +71,7 @@ class MyT:
                 username=username,
                 password=password,
                 brand=brand,
+                region=region,
             ),
         )
         self._use_metric = use_metric

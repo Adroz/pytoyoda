@@ -5,10 +5,29 @@
 [![Code Coverage](https://img.shields.io/codecov/c/github/pytoyoda/pytoyoda?logo=codecov&logoColor=white)](https://app.codecov.io/github/pytoyoda/pytoyoda/)
 [![CodeQL](https://github.com/pytoyoda/pytoyoda/actions/workflows/codeql.yml/badge.svg)](https://github.com/pytoyoda/pytoyoda/actions/workflows/codeql.yml)
 
-# Toyota Connected Services Europe Python module
+# Toyota Connected Services Python module (Australia fork)
 
-⚠️ _This is still in beta_
-⚠️ _Only EU is supported, other regions are not possible so far._
+> ## 🇦🇺 This is an Australia fork of [`pytoyoda/pytoyoda`](https://github.com/pytoyoda/pytoyoda)
+>
+> The upstream project targets Toyota Connected Services **Europe** only. This
+> fork adds an **`AU`** region (alongside `EU`) so the client can log in to and
+> read data from Toyota **Australia**'s _myToyota Connect_ backend (`tmca`):
+> odometer, fuel level, door/lock/window status, vehicle health and service
+> history.
+>
+> Use it exactly like upstream, passing `region="AU"`:
+>
+> ```python
+> client = MyT(username="me@example.com", password="…", region="AU")
+> ```
+>
+> The AU endpoints and login flow were reverse-engineered from the myToyota
+> Connect Android app and verified against the live backend. See the `AU` entry
+> in [`pytoyoda/const.py`](pytoyoda/const.py). Everything below is upstream
+> documentation and applies to both regions.
+
+⚠️ _This is still in beta._
+⚠️ _`EU` (upstream) and `AU` (this fork) are supported; other regions are not._
 
 ## Summary
 

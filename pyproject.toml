@@ -22,7 +22,7 @@ repository = "https://github.com/pytoyoda/pytoyoda"
 "Release Notes" = "https://github.com/pytoyoda/pytoyoda/releases"
 
 [tool.poetry]
-version = "4.0.2"
+version = "5.1.0"
 packages = [
     { include = "pytoyoda" },
 ]
@@ -61,11 +61,14 @@ pytest-sugar = "^1.0.0"
 pdoc = "^16.0.0"
 
 [tool.poetry-dynamic-versioning]
-enable = true
+# Disabled in this fork: dynamic versioning needs git tags, which fail when an
+# installer (e.g. Home Assistant's uv) does a shallow clone from the git URL.
+# A static [tool.poetry] version keeps `pip/uv install git+...` buildable.
+enable = false
 
 [build-system]
-requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
-build-backend = "poetry_dynamic_versioning.backend"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
 fix = true
